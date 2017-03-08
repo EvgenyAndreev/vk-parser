@@ -1,5 +1,12 @@
 extends layout
 
 block content
-  h1= title
-  p Welcome to #{title}
+
+	div.col-md-12
+		h1= title
+		form(method='POST' action='/searching_groups')
+			div.form-group
+				label(for='name') User vkid:
+				input#name.form-control(type='text', placeholder='only digits' name='vkid')
+			div.form-group
+				button.btn.btn-primary(type='submit') Поиск групп
