@@ -81,6 +81,24 @@ router.get('/api/comments/:group_id', function(req, res){
 	});*/
 });
 
+router.get('/api/posts/:group_id', function(req, res){
+	console.log(req.params.group_id);
+	parser.PostsGet(req.params.group_id, function(data){	
+		res.send('DONE');
+	});
+	/*
+	parser.PostsGet(req.group_id, function(data){	
+		var items = data.items;
+		items.forEach(function(item, i, items){
+			setTimeout(function() {
+				parser.CommentsGet(item, function(data){
+					res.send({id: 1, comment: "100"});
+				});
+			}, i*3000);
+		});
+	});*/
+});
+
 router.get('/contact', function(req, res){
   res.render('contact', {
     title: 'Contact'

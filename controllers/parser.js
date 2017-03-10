@@ -1,13 +1,20 @@
 // Setup
 var vk = require('vk-sdk');
 var db = require('./db');
+var SqlString = require('sqlstring');
+var emojiStrip = require('emoji-strip')
 var membersGroups = []; // массив участников группы
+var iter = 1;
 /**
  * Request server methods
  */
  
 vk.setToken("315e00e8315e00e831e2eaf61c311786533315e315e00e8699e6725d033d9494d432de2");
 //vk.setToken('bcfb52c5bcfb52c5bc47b8db03bcb2d47ebbcfbbcfb52c5e43acf406d35c1d88e4647dc');
+
+function symbol_check(input) {
+  return /^\w+$/i.test(input);
+}
 
 var GroupsGet = function(user_id, callback){
 	
@@ -63,7 +70,7 @@ var GroupsGet = function(user_id, callback){
 
 var PostsGet = function(group_id, callback){
 	db.post.count({ where: ["group_id = ?", group_id] }).then(function(count) {
-	
+		
 		vk.callMethod('wall.get', {
 		    owner_id: "-"+group_id,
 		    extended: 1,
@@ -71,33 +78,33 @@ var PostsGet = function(group_id, callback){
 		    offset: count
 		})
 	    .then(function (response) {
-	        //console.log('Success: ' + JSON.stringify(response));
+	        //console.log('Success: '+ iter + '_' + JSON.stringify(response));
 	        var posts = response.wall;
+	        var values = Array();
 			posts.forEach(function(item, i, posts){
-				let values = {
+				var text = '';
+				console.log(text);
+			    values.push({
 				    'group_id': group_id, 
 				    'post_id': item.id, 
-				    'text': item.text,
+				    'text': text,
 				    'post_type': item.post_type
-			    };
-			    db.post.upsert(values);
+				});
 			});
-			
-			var profiles = response.profiles;
-			profiles.forEach(function(item, i, profiles){
-				let values = {
-				    'group_id': group_id, 
-				    'user_id': item.id
-			    };
-			    db.groupusers.upsert(values);
-			});
-			
+			db.post.bulkCreate(values, {returning: true});
+			if(response){
+				setTimeout(function() {
+					PostsGet(group_id);}
+				, iter*333);
+			}
 			callback(response.profiles);
 			return;
 	    })
 	    .catch(function (error) {
+		    iter = 1;
 	        console.log('Fail: ' + JSON.stringify(error));
 	    });
+	    
 	})
 };
 
@@ -193,19 +200,19 @@ var MembersGet = function(group_id, members_count, callback){
 var CommentsGet = function(group_id, callback){
 	
 	//Подгрузить все посты выбранной группы
-	db.post.findAll({ where: { group_id: group_id } }).then(function(posts) {
+	db.post.findAll({ where: { group_id: group_id }, order: 'id DESC' }).then(function(posts) {
 		//Перебор постов с задержкой
 		posts.forEach(function(post, i, posts){
 			setTimeout(function() {
 				db.like.count({ where: {group_id: group_id, post_id: post.post_id}}).then(function(offset) {
-					console.log({
+					/*console.log({
 			        	type: post.post_type,
 			        	owner_id: "-"+post.group_id,
 			        	item_id: post.post_id,
 			        	count: 1000,
 			        	offset: offset,
 			        	v: '5.62'
-			        });
+			        });*/
 					vk.callMethod('likes.getList', {
 			        	type: post.post_type,
 			        	owner_id: "-"+post.group_id,
@@ -242,7 +249,7 @@ var CommentsGet = function(group_id, callback){
 				        console.log('Fail getMembers: ' + group_id +'_'+ offset +'_'+ members_count +'_'+ JSON.stringify(error));
 				    });
 			    });
-			}, i*1500);
+			}, i*400);
 		});
 			
 	});
